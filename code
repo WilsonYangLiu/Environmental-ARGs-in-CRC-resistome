@@ -1,2 +1,84 @@
 # Code for https://github.com/WilsonYangLiu/Environmental-ARGs-in-CRC-resistome.git
-# Updating
+# running script
+
+# overall config:
+#  id: the sample name
+#  R1: read 1 file name
+#  R2: read 2 file name
+
+## run kneaddata
+DB="-db mouse_C57BL_6NJ/mouse_C57BL_6NJ \
+    -db Homo_sapiens/Homo_sapiens"
+
+TRIM="Trimmomatic-0.39"
+TRIM_OPT="--trimmomatic $TRIM \
+  --max-memory 40000m \
+  --trimmomatic-options \"ILLUMINACLIP:Trimmomatic-0.39/adapters/TruSeq3-PE-2.fa:2:30:10 SLIDINGWINDOW:4:20 MINLEN:25\""
+
+FASTQC="miniconda2/bin"
+FASTQC_OPT=""
+
+kneaddata --input ${R1} --input ${R2} --output ${OUTPUT} --output-prefix ${prefix}
+${DB} ${TRIM_OPT} ${FASTQC_OPT} -t ${THREAD} -p 2
+
+
+## run metaphlan
+INPUT="$R1,$R2"
+metaphlan_opt="--tax_lev a \
+               --min_mapq_val 5 \
+               --bowtie2db metaphlan_databases \
+               --index mpa_v30_CHOCOPhlAn_201901 \
+               --bt2_ps very-sensitive \
+               --perc_nonzero 0.33"
+metaphlan ${INPUT} ${metaphlan_opt} -t rel_ab_w_read_stats --input_type fastq --samout ${OUTPUT}/${prefix}.sam.bz2
+--bowtie2out ${OUTPUT}/${prefix}.bowtie2.bz2 --nproc ${THREAD} --output_file ${OUTPUT}/${prefix}.txt
+
+
+## run megahit
+OPT=""
+megahit ${OPT} --num-cpu-threads $THREAD -1 ${R1} -2 ${R2} -o ${OUTPUT}
+
+
+## run MaxBin
+fq2fa --merge --filter <(gzip -cd ${R1}) <(gzip -cd ${R2}) ${OUTPUT}/bin.fastq
+
+MaxBin_OPT="-markerset 107 -plotmarker"
+run_MaxBin.pl ${MaxBin_OPT} -thread ${THREAD} -contig ${INPUT} -out ${OUTPUT}/bin -reads ${OUTPUT}/bin.fastq
+
+
+## run checkm
+checkm lineage_wf -t 5 -x fasta --file ${id}/result.tsv ${id} ${id} 
+checkm tree_qa --tab_table -o 2 -f ${id}/result.tree_qa.tsv ${id}
+
+checkm qa -o 2 --tab_table --file ${id}/result.qa.tsv ${id}/lineage.ms ${id}
+
+
+## run prodigal, deeparg, rgi, virsorter, deepvirfinder, and PlasFlow
+# input: the assembled genome
+# deepvirfinder: path to deepvirfinder
+prodigal -i ${input} -o ${output.GFF} -a ${output.ORF} -f gff -p meta
+
+# db: path to genomad database
+docker run -i --rm -v "$(pwd):/app" -u $(id -u):$(id -g) antoniopcamargo/genomad end-to-end ${input} ${out} $db
+
+deeparg predict --model LS --model-version v2 --type prot --input ${input} --out deepARG_results/${out}
+rgi main --input_sequence ${input} --output_file RGI_results/${out} --input_type protein --local --clean
+
+wrapper_phage_contigs_sorter_iPlant.pl -f ${input} --ncpu ${threads} --wdir phage/virsorter --data-dir virsorter
+python ${deepvirfinder} -i ${input} -o phage/virfinder -c ${threads}
+
+threshold=0.7
+PlasFlow.py --input ${input} --output ${output} --threshold ${threshold}
+
+
+## run blastn
+Ref="ISfinder-sequences/IS.fna"
+blastn -query ${query} -task blastn -db $Ref -out /dev/stdout -evalue 10e-10 -outfmt 7 -perc_identity 99 -num_threads ${Thread} | gzip -1 > ${Prefix}.tsv.gz
+
+
+## run args_oap
+# IN: folder containing the sequencing database
+# OUT: folder to store the result
+args_oap stage_one -i ${IN}/${id} -o ${OUT}/${id} -f fq.gz -t 7 &> ${OUT}/${id}.e
+
+args_oap stage_two -i ${OUT}/${id} -t 7
