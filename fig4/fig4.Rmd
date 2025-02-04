@@ -1,1 +1,180 @@
-
+## - The distribution of mobile ARG in MGE
+  y = reshape2::melt(as.matrix(Data$mARG.dist))
+  ggplot(data = y, mapping = aes(x = Var1,y = value*100,fill = Var2)) + 
+    geom_bar(stat="identity", width = 0.8, alpha = 1, lwd = 0.1, color = 'black', position=position_dodge())+
+    labs(y = 'Ratio (%) of mARG\nin total ARG', x = '') +
+    theme_minimal() + 
+    theme(panel.grid = element_line(color = 'white', linetype = 1), 
+          legend.position = 'right', #, c(1.0, 1.0), 
+          legend.spacing.x = unit(x = 6, units = 'pt'),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 8),
+          legend.key.size = unit(x = 8, units = 'pt'),
+          legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+          axis.title = element_text(size = 12), 
+          axis.text.x = element_text(size = 10, color = 'black'),
+          axis.text.y = element_text(size = 10, color = 'black'),
+          axis.line.x.bottom = element_line(colour = 'black'),
+          axis.ticks.x.bottom = element_line(colour = 'black'),
+          axis.line.y.left = element_line(colour = 'black'),
+          axis.ticks.y.left = element_line(colour = 'black'),
+          axis.ticks.length = unit(.05, "cm")) +
+    scale_y_continuous(expand = expand_scale(mult = c(0, 0.1))) +
+    scale_fill_manual(values = c("r.mARG_2" = '#fb2e01', "r.mARG_byPhage" = '#6fcb9f', 
+                                 "r.mARG_byPlasmid" = '#ffe28a', "r.mARG_byChromosome" = '#666547'))
+  
+  
+  ## - The distribution of mARG between the CRC and CTRL
+  ID = rownames(metadat)
+  ARG.bySam <- list()
+  metaARG <- do.call(rbind, lapply(ID, function(sam) {
+    # sam = 'A10A'
+    print(sprintf('[INFO]: process samples %s ...',sam))
+    ARG.perSam = AMR_MGE_IS[AMR_MGE_IS$Sample.x == sam & AMR_MGE_IS$Contig_len > 1000, ]
+    
+    ARGs = unique(ARG.perSam$ARG)
+    ARG.perSam.r <- do.call(rbind, lapply(ARGs, function(x) {
+      perARG = ARG.perSam[ARG.perSam$ARG == x, ]
+      perARG$valid_IS = apply(perARG[, c("subject acc.ver", "IS_start_end", "Contig_start_end")], 1, function(aLine) {
+        if (is.na(aLine[1])) return(FALSE)
+        
+        idx_arg = as.numeric(c(gsub('^([0-9]+)-([0-9]+):[+-]$', '\\1', aLine[3]), 
+                               gsub('^([0-9]+)-([0-9]+):[+-]$', '\\2', aLine[3])))
+        idx_arg[1] = idx_arg[1] - 5000
+        idx_arg[2] = idx_arg[2] + 5000
+        
+        idx_mge = as.numeric(c(gsub('^([0-9]+)-([0-9]+):[+-]$', '\\1', aLine[2]), 
+                               gsub('^([0-9]+)-([0-9]+):[+-]$', '\\2', aLine[2])))
+        
+        !is.null(unlist(genscore::interval_intersection(A = list(idx_arg), B = list(idx_mge))))
+      })
+      
+      perARG.Contig = unique(perARG[, c('Contig', 'MGE_prediction')])
+      perARG.Contig$IS = apply(perARG.Contig, 1, function(contig) {
+        sum(perARG$valid_IS[perARG$Contig == contig[1]])
+      })
+      perARG.Contig$MGE = grepl('phage|plasmid', perARG.Contig$MGE_prediction) | perARG.Contig$IS != 0
+      perARG.Contig$MGE_IS = perARG.Contig$MGE & perARG.Contig$IS != 0
+      
+      c(ARG = x,
+        '# contig' = dim(perARG.Contig)[1],
+        '# MGE' = sum(perARG.Contig$MGE),
+        '# MGE_IS' = sum(perARG.Contig$MGE_IS))
+    }))
+    ARG.perSam.r = as.data.frame(ARG.perSam.r)
+    ARG.bySam[[sam]] <<- ARG.perSam.r
+    
+    c(Sample = sam,
+      '# ARG' = length(ARGs),
+      '# mobileARG_1' = sum(ARG.perSam.r$`# MGE` != 0),
+      '# mobileARG_2' = sum(ARG.perSam.r$`# MGE_IS` != 0))
+  }))
+  metaARG = as.data.frame(metaARG)
+  rownames(metaARG) = metaARG$Sample
+  
+  ### - draw the distribution
+  g <- ggplot(Data$mARG, aes(x = Stage, y = val, fill = Stage, col = Stage)) +
+    geom_violin(aes(), lwd = 0.5, alpha = 0.5) +
+    geom_boxplot(outlier.shape = NA, col = 'black', 
+                 position = position_dodge(0.6),
+                 linetype = 'solid',
+                 width = 0.2, lwd = 0.1, notch = FALSE) +
+    labs(x = '', y = sprintf('mobile ARG/per sample'))
+  g <- g + theme_minimal() + 
+    theme(panel.grid = element_line(color = 'white', linetype = 1), 
+          legend.position = 'none', #, c(1.0, 1.0), 
+          legend.spacing.x = unit(x = 6, units = 'pt'),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 8),
+          legend.key.size = unit(x = 8, units = 'pt'),
+          legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+          axis.title = element_text(size = 12), 
+          axis.text.x = element_text(size = 10, color = 'black', angle = 60, vjust = 1, hjust = 1),
+          axis.text.y = element_text(size = 10, color = 'black'),
+          axis.line.x.bottom = element_line(colour = 'black'),
+          axis.ticks.x.bottom = element_line(colour = 'black'),
+          axis.line.y.left = element_line(colour = 'black'),
+          axis.ticks.y.left = element_line(colour = 'black'),
+          axis.ticks.length = unit(.05, "cm"))
+  g <- g +
+    scale_fill_manual(values = c(CTRL=col_NC, CRC=col_CRC)) + 
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1))) 
+  g
+  
+  
+  ## -
+  calc_efficiency_HGT = function(ARG_host..Hbt.1, ARG_host..Hbt.2) {
+    m = length(unique(ARG_host..Hbt.1$sam))
+    n = length(unique(ARG_host..Hbt.2$sam))
+    
+    ET_H = nrow(unique(ARG_host..Hbt.1[, 1:3]))
+    ET_F = nrow(unique(ARG_host..Hbt.2[, 1:3]))
+    ET_S.all = ET_H * ET_F
+    
+    ID = intersect(unique(ARG_host..Hbt.1$host), unique(ARG_host..Hbt.2$host))
+    ET_S.within = do.call('c', lapply(ID, function(sp) {
+      # sp = 's__Bacteroides_vulgatus'
+      ET_h = nrow(unique(ARG_host..Hbt.1[ARG_host..Hbt.1$host == sp, 1:2]))
+      ET_f = nrow(unique(ARG_host..Hbt.2[ARG_host..Hbt.2$host == sp, 1:2]))
+      ET_h * ET_f
+    }))
+    ET_S.within = sum(ET_S.within)
+    
+    ET_B = intersect(unique(ARG_host..Hbt.1$ARG), unique(ARG_host..Hbt.2$ARG))
+    
+    HTR = do.call('rbind', lapply(ET_B, function(j) {
+      Hbt.1 = ARG_host..Hbt.1[ARG_host..Hbt.1$ARG == j, ]
+      Hbt.2 = ARG_host..Hbt.2[ARG_host..Hbt.2$ARG == j, ]
+      
+      ID = intersect(unique(Hbt.1$host), unique(Hbt.2$host))
+      H.j.within = do.call('c', lapply(ID, function(i) {
+        sum(Hbt.1$host == i) * sum(Hbt.2$host == i)
+      }))
+      H.j.within = sum(H.j.within)
+      
+      H.j.between = nrow(Hbt.1) * nrow(Hbt.2) - H.j.within
+      
+      c(H.j.within = H.j.within, H.j.between = H.j.between)
+    }))
+    HTR.within = sum(HTR[, 1])
+    HTR.between = sum(HTR[, 2])
+    
+    ## -
+    ET.between = ((HTR.between / (ET_S.all - ET_S.within)) * length(ET_B)) / (m * n)
+    ET.within = ((HTR.within / ET_S.within) * length(ET_B)) / (m * n)
+    
+    return(c('ET.between' = ET.between, 'ET.within' = ET.within))
+  }
+  
+  tab = data.frame(group = factor(c(rep('CRC_Env', 2), rep('CTRL_Env', 2)), c('CTRL_Env', 'CRC_Env')), 
+                   type = factor(rep(c('between', 'within'), 2), c('within', 'between')), 
+                   val = c(calc_efficiency_HGT(ARG_host..CRC, ARG_host..Env), 
+                           calc_efficiency_HGT(ARG_host..CTRL, ARG_host..Env)))
+  
+  ### -
+  ggplot(Data$Effi, aes(x=type, y=(val), fill=group)) + 
+    geom_bar(stat="identity", position=position_dodge(0.4),
+             width = 0.05, alpha = 1, lwd = 0.1, color = 'black')+
+    geom_point(shape = 21, col = 'black', position=position_dodge(0.4), size = 3, alpha = 1) +
+    geom_hline(yintercept = 0, col = 'black', lwd = 1.5) +
+    theme_minimal() + 
+    labs(x = '', y = 'Efficiency of HGTs') +
+    theme(panel.grid = element_line(color = 'white', linetype = 1), 
+          legend.position = 'none', #, c(1.0, 1.0), 
+          legend.spacing.x = unit(x = 6, units = 'pt'),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 8),
+          legend.key.size = unit(x = 8, units = 'pt'),
+          legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+          axis.title = element_text(size = 12), 
+          axis.text.x = element_text(size = 10, color = 'black'),
+          axis.text.y = element_text(size = 10, color = 'black'),
+          axis.line.x.bottom = element_blank(), # element_line(colour = 'black'),
+          axis.ticks.x.bottom = element_blank(), #element_line(colour = 'black'),
+          axis.line.y.left = element_line(colour = 'black'),
+          axis.ticks.y.left = element_line(colour = 'black'),
+          axis.ticks.length = unit(.1, "cm")) +
+    # ggbreak::scale_y_break(c(0.001, 0.0025), scales = 10, space = 0.1, expand = expansion(mult = c(0, 0))) +
+    scale_fill_manual(values = c(CRC_Env=col_CRC, CTRL_Env=col_NC)) +
+    scale_y_continuous(trans = ggallin::ssqrt_trans) + 
+    annotation_logticks(sides = 'l', short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm"))
