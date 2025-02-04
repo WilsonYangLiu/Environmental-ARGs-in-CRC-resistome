@@ -1,1 +1,256 @@
 # updating
+col_NC <- '#82B446'
+col_CRC <- "#7846B4"
+
+# Fig. 2
+## Generate the overall ARG profile in human CRC samples
+plot(Data$cca_stool, choices = c(1, 2), display = c('wa'), type = 'n')
+points(Data$cca_stool, choices = c(1, 2), display = 'wa', 
+       col = c(CTRL = col_NC, CRC = col_CRC)[Data$meta_stool$Stage],
+       pch = 19, scaling = 'sp', cex = 0.5)
+with(Data$meta_stool, ordiellipse(Data$cca_stool, choices = c(1, 2), Stage, 
+                        draw = 'polygon', alpha = 0.1,
+                        col = c(CTRL = col_NC, CRC = col_CRC),
+                        conf = 0.75))
+
+
+## Generate the overall ARG burden in human CRC samples
+wilcox.test(val ~ Stage, data = Data$burden_stool )
+t.test(val ~ Stage, data = Data$burden_stool )
+
+g <- ggplot(Data$burden_stool, aes(x = Stage, y = val, fill = Stage, col = Stage)) +
+  geom_violin(aes(), lwd = 0.5, alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, col = 'black', size = 0.5, #fill = 'grey',
+               position = position_dodge(0.6),
+               linetype = 'solid',
+               width = 0.2, lwd = 0.1, notch = FALSE) +
+  labs(x = '', y = sprintf('ARG burden'))
+g <- g + theme_minimal() + 
+  theme(panel.grid = element_line(color = 'white', linetype = 1), 
+        legend.position = 'none', #, c(1.0, 1.0), 
+        legend.spacing.x = unit(x = 6, units = 'pt'),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 8),
+        legend.key.size = unit(x = 8, units = 'pt'),
+        legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+        axis.title = element_text(size = 12), 
+        axis.text.x = element_text(size = 10, color = 'black', angle = 60, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        axis.line.x.bottom = element_line(colour = 'black'),
+        axis.ticks.x.bottom = element_line(colour = 'black'),
+        axis.line.y.left = element_line(colour = 'black'),
+        axis.ticks.y.left = element_line(colour = 'black'),
+        axis.ticks.length = unit(.05, "cm"))
+g <- g + scale_fill_manual(values = c(CTRL=col_NC, CRC=col_CRC)) +
+  scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0)))
+g
+
+
+## Generate the Type-specific ARG burden
+mylog_trans <- function(base=exp(1), from=0) 
+{
+  require(scales)
+  trans <- function(x) log(x, base)-from
+  inv <- function(x) base^(x+from)
+  trans_new("mylog", trans, inv, log_breaks(base=base), 
+            domain = c(base^from, Inf))
+}
+
+g <- ggplot(data = Data$burden_stool.type, mapping = aes(x = Type, y = val, fill = Stage)) + 
+  geom_bar(stat="identity", position=position_dodge(0.5),
+           width = 0.05, alpha = 1, lwd = 0.1, color = 'black')+
+  geom_point(shape = 21, col = 'black', position=position_dodge(0.5), size = 1.5) +
+  labs(x = '', y = 'ARG burden')
+g <- g + theme_minimal() + 
+  theme(panel.grid = element_line(color = 'white', linetype = 1), 
+        legend.position = 'none', #, c(1.0, 1.0), 
+        legend.spacing.x = unit(x = 6, units = 'pt'),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 8),
+        legend.key.size = unit(x = 8, units = 'pt'),
+        legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+        axis.title = element_text(size = 12), 
+        axis.text.x = element_text(size = 10, color = 'black', angle = 60, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        axis.line.x.bottom = element_line(colour = 'black'),
+        axis.ticks.x.bottom = element_line(colour = 'black'),
+        axis.line.y.left = element_line(colour = 'black'),
+        axis.ticks.y.left = element_line(colour = 'black'),
+        axis.ticks.length = unit(.02, "cm"))
+g <- g + scale_y_continuous(trans = mylog_trans(base=10, from=-4), expand = expansion(mult = c(0, 0.1)))+
+  annotation_logticks(sides = 'l', size = 0.4,
+                      short = unit(0, "cm"),
+                      mid = unit(0.1, "cm"),
+                      long = unit(0.2, "cm"))
+g
+
+
+## Generate the overall ARG profile between human stool and Env (only city-matched env and human samples were used)
+cols = c('CRC' = col_CRC, 'CTRL' = col_NC, 'env' = '#ffcc5c')
+
+g <- ggplot(data = Data$cca_stool.env, aes(x = CCA1,y = CCA2, fill = Stage)) + 
+  geom_point(size=2, shape=23)
+g <- g + stat_ellipse(aes(col = Stage), level = 0.99, size = 1, lty = 'dashed')
+g <- g + theme_bw() + 
+  theme(legend.position = "none",
+        axis.text.x = element_text(colour = 'black', size = 8),
+        axis.text.y = element_text(colour = 'black', size = 8),
+        panel.border = element_rect(linetype = 'solid', size = 0.5),
+        panel.background = element_rect(fill = 'white', linetype = 'solid'),
+        panel.grid = element_line(color = 'white', linetype = 1), 
+        panel.spacing = unit(1, "lines"),
+        strip.background = element_rect(fill="white", colour = 'white'), 
+        strip.text = element_blank(), #element_text(colour = 'black', size = 15),
+        strip.placement = 'outside')
+g + scale_y_continuous(trans = ggallin::pseudolog10_trans) +
+  scale_x_continuous(trans = ggallin::pseudolog10_trans) +
+  scale_fill_manual(values = cols) +
+  scale_color_manual(values = cols) + 
+  annotation_logticks(sides = 'bl', short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm"))
+
+
+## Calculating the similarity between the env. and human stool ARG profiles
+betad <- vegan::vegdist(x = t(dat_used), method = 'bray', binary = TRUE)
+betad <- as.matrix(betad); betad[upper.tri(betad, diag = TRUE)] <- NA
+betad <- reshape2::melt(betad)
+betad <- betad[!is.na(betad$value), ]
+betad$Var1.Stage = metadat[as.character(betad$Var1), 'Stage']
+betad$Var2.Stage = metadat[as.character(betad$Var2), 'Stage']
+
+wilcox.test(value~group, betad)
+
+g <- ggplot(data = Data$dist.env2stool, mapping = aes(x = group, y = (value))) +
+  geom_violin(aes(), lwd = 0.5, alpha = 0.8, width = 0.8) +
+  geom_boxplot(aes(), outlier.shape = NA, fill = 'grey',
+               position = position_dodge(0.6), 
+               linetype = 'solid',
+               width = 0.2, lwd = 0.1, notch = FALSE) +
+  stat_summary(fun.y = median, geom = "point", shape = 4, size = 2, col = '#800000',
+               position = position_dodge(0.6)) +
+  labs(x = '', y = "Bray-Curtis distance") 
+g <- g + theme_minimal() + 
+  theme(panel.grid = element_line(color = 'white', linetype = 1), 
+        legend.position = 'none', #, c(1.0, 1.0), 
+        legend.spacing.x = unit(x = 6, units = 'pt'),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 8),
+        legend.key.size = unit(x = 8, units = 'pt'),
+        legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+        axis.title = element_text(size = 12), 
+        axis.text.x = element_text(size = 10, color = 'black', angle = 60, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        axis.line.x.bottom = element_line(colour = 'black'),
+        axis.ticks.x.bottom = element_line(colour = 'black'),
+        axis.line.y.left = element_line(colour = 'black'),
+        axis.ticks.y.left = element_line(colour = 'black'),
+        axis.ticks.length = unit(.05, "cm")) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, 0.1))) 
+g
+
+
+## Comparing the between-city env-human stool ARG similarity to within-city env-human stool ARG similarity
+betad <- vegan::vegdist(x = t(dat_used), method = 'bray', binary = TRUE)
+betad <- as.matrix(betad); betad[upper.tri(betad, diag = TRUE)] <- NA
+betad <- reshape2::melt(betad)
+betad <- betad[!is.na(betad$value), ]
+betad$Var1.Stage = metadat[as.character(betad$Var1), 'Stage']
+betad$Var2.Stage = metadat[as.character(betad$Var2), 'Stage']
+
+wilcox.test(value ~ stat, Data$dist.btw2wtn)
+
+g <- ggplot(data = Data$dist.btw2wtn, mapping = aes(x = stat, y = (value))) +
+  geom_violin(aes(), lwd = 0.5, alpha = 0.8, width = 0.8) +
+  geom_boxplot(aes(), outlier.shape = NA, fill = 'grey',
+               position = position_dodge(0.6), 
+               linetype = 'solid',
+               width = 0.2, lwd = 0.1, notch = FALSE) +
+  stat_summary(fun.y = median, geom = "point", shape = 4, size = 2, col = '#800000',
+               position = position_dodge(0.6)) +
+  labs(x = '', y = "distance") 
+g <- g + theme_minimal() + 
+  theme(panel.grid = element_line(color = 'white', linetype = 1), 
+        legend.position = 'none', #, c(1.0, 1.0), 
+        legend.spacing.x = unit(x = 6, units = 'pt'),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 8),
+        legend.key.size = unit(x = 8, units = 'pt'),
+        legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+        axis.title = element_text(size = 12), 
+        axis.text.x = element_text(size = 10, color = 'black', angle = 60, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        axis.line.x.bottom = element_line(colour = 'black'),
+        axis.ticks.x.bottom = element_line(colour = 'black'),
+        axis.line.y.left = element_line(colour = 'black'),
+        axis.ticks.y.left = element_line(colour = 'black'),
+        axis.ticks.length = unit(.05, "cm")) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, 0.1))) 
+g
+
+
+## Calculating the contribution of Env. ARG to human stool
+do_FEAST <- function(cnts, pheno, prefix) {
+  FEAST_output <- FEAST::FEAST(C = t(cnts), metadata = pheno, 
+                               different_sources_flag = 0, 
+                               dir_path = "Result/FEAST",
+                               outfile=prefix)
+  FEAST_output
+}
+
+cl <- makeCluster(105)
+registerDoParallel(cl)
+
+d = pheno$id[!is.na(pheno$id)]
+d = split(d, ceiling(seq_along(d)/9))
+tmp <- foreach(i=d, .combine = list) %dopar% 
+  do_FEAST(cnts = cnts, 
+           pheno = pheno[is.na(pheno$id) | pheno$id %in% i, ], 
+           prefix = paste('FEAST', min(i), max(i), sep = '-'))
+
+stopCluster(cl)
+
+fs = list.files(path = 'Result/FEAST', pattern = 'FEAST-.*_source_contributions_matrix.txt', full.names = TRUE, recursive = FALSE)
+FEAST_output = do.call('rbind', lapply(fs, function(f) {
+  fd = read.csv(file = f, header = TRUE, sep = '\t', row.names = 1, 
+                stringsAsFactors = FALSE, strip.white = TRUE, check.names = FALSE)
+  
+  fd
+}) )
+FEAST_output$group = gsub('(.*)_(CTRL|CRC)$', '\\2', rownames(FEAST_output))
+rownames(FEAST_output) = gsub('(.*)_(CTRL|CRC)$', '\\1', rownames(FEAST_output))
+colnames(FEAST_output) = gsub('_env$', '', colnames(FEAST_output))
+
+wilcox.test(Env ~ group, data = FEAST_output)
+FEAST_output %>% group_by(group) %>% 
+  dplyr::summarise(stat=median(Env), .groups = 'drop') %>% 
+  as.data.frame(stringsAsFactors = FALSE)
+
+g <- ggplot(data = Data$FEAST.env2stool, mapping = aes(x = group, y = (Env))) +
+  geom_violin(aes(), lwd = 0.5, alpha = 0.8, width = 0.8) +
+  geom_boxplot(aes(), outlier.shape = NA, fill = 'grey',
+               position = position_dodge(0.6), 
+               linetype = 'solid',
+               width = 0.2, lwd = 0.1, notch = FALSE) +
+  stat_summary(fun.y = median, geom = "point", shape = 4, size = 2, col = '#800000',
+               position = position_dodge(0.6)) +
+  labs(x = '', y = "Env. contribution to stool ARG") 
+g <- g + theme_minimal() + 
+  theme(panel.grid = element_line(color = 'white', linetype = 1), 
+        legend.position = 'none', #, c(1.0, 1.0), 
+        legend.spacing.x = unit(x = 6, units = 'pt'),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 8),
+        legend.key.size = unit(x = 8, units = 'pt'),
+        legend.background = element_rect(fill="white", size=.5, linetype="solid", colour = 'black'), 
+        axis.title = element_text(size = 12), 
+        axis.text.x = element_text(size = 10, color = 'black', angle = 60, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        axis.line.x.bottom = element_line(colour = 'black'),
+        axis.ticks.x.bottom = element_line(colour = 'black'),
+        axis.line.y.left = element_line(colour = 'black'),
+        axis.ticks.y.left = element_line(colour = 'black'),
+        axis.ticks.length = unit(.05, "cm")) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, 0.1))) 
+g
+
+
+
