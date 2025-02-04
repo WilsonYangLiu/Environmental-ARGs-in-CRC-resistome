@@ -1,4 +1,5 @@
-# updating
+# Key codes to generate the graph were provided, and data were stored in Data obj
+
 ## - code for calculating core index
   tab = do.call('rbind', lapply(rownames(dat_used), function(x) {
     # x = as.numeric(dat_used[120, ])
