@@ -1,3 +1,5 @@
+# Key codes to generate the graph were provided, and data were stored in Data obj
+
 ## - The distribution of mobile ARG in MGE
   y = reshape2::melt(as.matrix(Data$mARG.dist))
   ggplot(data = y, mapping = aes(x = Var1,y = value*100,fill = Var2)) + 
