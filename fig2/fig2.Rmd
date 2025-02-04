@@ -1,4 +1,5 @@
-# updating
+# Key codes to generate the graph were provided, and data were stored in Data obj
+
 col_NC <- '#82B446'
 col_CRC <- "#7846B4"
 
