@@ -1,0 +1,36 @@
+"","ID","type","value"
+"1","ACRB","multidrug",0.001339815
+"2","ACRF","multidrug",0.000513516
+"3","AMRB","multidrug",0.000201799
+"4","APH(3'')-I","aminoglycoside",0.000561672
+"5","APH(6)-I","aminoglycoside",0.000347834
+"6","ARNA","polymyxin",0.000900986
+"7","BACA","bacitracin",-0.006826755
+"8","BIFIDOBACTERIA INTRINSIC ILES CONFERRING RESISTANCE TO MUPIROCIN","mupirocin",-0.004779272
+"9","CAMP-REGULATORY PROTEIN","unclassified",0.00175543
+"10","EMRA","multidrug",0.000564067
+"11","EMRB","multidrug",0.000836456
+"12","EMRD","multidrug",0.000730651
+"13","ERMB","macrolide-lincosamide-streptogramin",-0.008121233
+"14","KASUGAMYCIN RESISTANCE PROTEIN KSGA","kasugamycin",0.001344693
+"15","LNU(C)","macrolide-lincosamide-streptogramin",-0.001490338
+"16","MACA","macrolide-lincosamide-streptogramin",0.000360263
+"17","MDTB","multidrug",0.000789215
+"18","MDTC","multidrug",0.000743937
+"19","MDTF","multidrug",0.000266682
+"20","MDTK","multidrug",0.001663077
+"21","MEXE","multidrug",0.0004543
+"22","MEXF","multidrug",0.000332049
+"23","MSBA","multidrug",0.001398097
+"24","MULTIDRUG_TRANSPORTER","multidrug",0.00127653
+"25","RANA","multidrug",0.001909134
+"26","RANB","multidrug",0.001241035
+"27","ROSA","polymyxin",0.000722929
+"28","ROSB","polymyxin",0.000286824
+"29","SUL2","sulfonamide",0.000773224
+"30","TAEA","pleuromutilin_tiamulin",-0.000707804
+"31","TET(A)","tetracycline",0.000288734
+"32","TET(O)","tetracycline",-0.007318499
+"33","TOLC","multidrug",0.000677388
+"34","TRANSCRIPTIONAL REGULATORY PROTEIN CPXR CPXR","unclassified",0.000863108
+"35","UGD","polymyxin",-0.003673854
